@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NECROTOPIA: Enhanced Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nosifer&family=Creepster&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(180deg, #1a0a0f 0%, #0d0508 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Creepster', cursive;
+            overflow: hidden;
+        }
+        #gameContainer {
+            position: relative;
+            width: 1200px;
+            height: 700px;
+            background: #000;
+            border: 4px solid #8b0000;
+            box-shadow: 0 0 30px rgba(139, 0, 0, 0.5);
+        }
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        #titleScreen, #deathScreen, #levelComplete {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        h1 {
+            font-family: 'Nosifer', cursive;
+            font-size: 72px;
+            color: #ff0000;
+            text-shadow: 0 0 20px #ff0000, 0 0 40px #8b0000;
+            margin-bottom: 30px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { text-shadow: 0 0 20px #ff0000, 0 0 40px #8b0000; }
+            50% { text-shadow: 0 0 40px #ff0000, 0 0 80px #8b0000; }
+        }
+        .subtitle {
+            font-size: 24px;
+            color: #ff6666;
+            margin-bottom: 40px;
+            letter-spacing: 4px;
+        }
+        .char-select {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .char-option {
+            width: 150px;
+            padding: 20px;
+            background: linear-gradient(145deg, #2a0a0f, #1a0508);
+            border: 3px solid #8b0000;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        .char-option:hover {
+            border-color: #ff0000;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+            transform: scale(1.05);
+        }
+        .char-option.selected {
+            border-color: #ff0000;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);
+            background: linear-gradient(145deg, #3a0a0f, #2a0508);
+        }
+        .char-name {
+            font-size: 20px;
+            color: #ff6666;
+            margin: 10px 0;
+        }
+        .char-class {
+            font-size: 14px;
+            color: #cc4444;
+            font-family: Arial, sans-serif;
+        }
+        .char-stats {
+            font-size: 12px;
+            color: #999;
+            margin-top: 10px;
+            font-family: Arial, sans-serif;
+        }
+        button {
+            padding: 15px 40px;
+            font-size: 24px;
+            font-family: 'Creepster', cursive;
+            background: linear-gradient(145deg, #8b0000, #5a0000);
+            color: #fff;
+            border: 3px solid #ff0000;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 10px;
+        }
+        button:hover {
+            background: linear-gradient(145deg, #b00000, #8b0000);
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+            transform: scale(1.05);
+        }
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #fff;
+            font-size: 18px;
+            z-index: 5;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #8b0000;
+        }
+        .health-bar, .xp-bar {
+            width: 200px;
+            height: 20px;
+            background: #2a0a0f;
+            border: 2px solid #8b0000;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #8b0000);
+            transition: width 0.3s;
+        }
+        .xp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #008800);
+            transition: width 0.3s;
+        }
+        .message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: #ff0000;
+            text-shadow: 0 0 20px #000;
+            z-index: 8;
+            animation: fadeOut 2s forwards;
+        }
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+        }
+        #deathScreen, #levelComplete { display: none; }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="1200" height="700"></canvas>
+        
+        <div id="titleScreen">
+            <h1>† NECROTOPIA †</h1>
+            <div class="subtitle">HANDBOOK TO THE APOCALYPSE</div>
+            
+            <div class="char-select">
+                <div class="char-option selected" data-char="billy">
+                    <canvas class="char-preview" width="100" height="100"></canvas>
+                    <div class="char-name">Billy Tait</div>
+                    <div class="char-class">Ghost Detective</div>
+                    <div class="char-stats">HP: 24 | DMG: 8<br>Speed: Fast | Weapon: Spirit Blade</div>
+                </div>
+                <div class="char-option" data-char="bonnie">
+                    <canvas class="char-preview" width="100" height="100"></canvas>
+                    <div class="char-name">Bonnie</div>
+                    <div class="char-class">Soldier</div>
+                    <div class="char-stats">HP: 28 | DMG: 10<br>Speed: Medium | Weapon: Rifle</div>
+                </div>
+                <div class="char-option" data-char="finnagan">
+                    <canvas class="char-preview" width="100" height="100"></canvas>
+                    <div class="char-name">Finnagan</div>
+                    <div class="char-class">Werewolf</div>
+                    <div class="char-stats">HP: 32 | DMG: 12<br>Speed: Fast | Weapon: Claws</div>
+                </div>
+                <div class="char-option" data-char="raktooth">
+                    <canvas class="char-preview" width="100" height="100"></canvas>
+                    <div class="char-name">Raktooth</div>
+                    <div class="char-class">Goblin Rogue</div>
+                    <div class="char-stats">HP: 20 | DMG: 6<br>Speed: Very Fast | Weapon: Daggers</div>
+                </div>
+            </div>
+            
+            <button id="startBtn">BEGIN THE APOCALYPSE</button>
+        </div>
+        
+        <div id="deathScreen">
+            <h1>☠ YOU DIED ☠</h1>
+            <div class="subtitle">THE DARKNESS CLAIMS ANOTHER SOUL</div>
+            <div style="color: #ff6666; font-size: 32px; margin: 20px 0;">
+                Score: <span id="finalScore">0</span>
+            </div>
+            <button id="retryBtn">RISE AGAIN</button>
+        </div>
+        
+        <div id="levelComplete">
+            <h1>† LEVEL COMPLETE †</h1>
+            <div class="subtitle">THE APOCALYPSE CONTINUES...</div>
+            <div style="color: #ff6666; font-size: 24px; margin: 20px 0;">
+                <div>Enemies Slain: <span id="killCount">0</span></div>
+                <div>XP Gained: <span id="xpGained">0</span></div>
+            </div>
+            <button id="nextBtn">NEXT LEVEL</button>
+        </div>
+        
+        <div id="ui">
+            <div style="color: #ff6666; font-size: 24px; margin-bottom: 10px;">
+                <span id="charName">Billy Tait</span> - Lv.<span id="level">1</span>
+            </div>
+            <div>HP: <span id="hp">24</span>/<span id="maxHp">24</span></div>
+            <div class="health-bar"><div class="health-fill" id="healthFill"></div></div>
+            <div>XP: <span id="xp">0</span>/<span id="xpNeeded">100</span></div>
+            <div class="xp-bar"><div class="xp-fill" id="xpFill"></div></div>
+            <div style="margin-top: 10px;">Score: <span id="score">0</span></div>
+            <div>Level: <span id="currentLevelText">1</span> - <span id="levelName">Las Vegas Chapel</span></div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Game state
+        let gameState = 'title';
+        let selectedChar = 'billy';
+        let currentLevel = 0;
+        let score = 0;
+        
+        // Player object
+        let player = {
+            x: 100,
+            y: 500,
+            width: 40,
+            height: 60,
+            vx: 0,
+            vy: 0,
+            speed: 5,
+            jumpPower: 15,
+            grounded: false,
+            facing: 1,
+            health: 24,
+            maxHealth: 24,
+            damage: 8,
+            armor: 10,
+            level: 1,
+            xp: 0,
+            xpNeeded: 100,
+            attackCooldown: 0,
+            invulnerable: 0,
+            animFrame: 0,
+            animTimer: 0,
+            type: 'billy'
+        };
+        
+        // Character stats
+        const charStats = {
+            billy: { hp: 24, dmg: 8, speed: 5, armor: 15, weapon: 'spirit', range: 80 },
+            bonnie: { hp: 28, dmg: 10, speed: 4, armor: 18, weapon: 'rifle', range: 300 },
+            finnagan: { hp: 32, dmg: 12, speed: 5, armor: 20, weapon: 'claws', range: 60 },
+            raktooth: { hp: 20, dmg: 6, speed: 6, armor: 12, weapon: 'daggers', range: 70 }
+        };
+        
+        // Arrays
+        let platforms = [];
+        let enemies = [];
+        let projectiles = [];
+        let particles = [];
+        let items = [];
+        
+        // Input
+        const keys = {};
+        let mouseDown = false;
+        
+        // Level definitions
+        const levels = [
+            {
+                name: "Las Vegas Chapel",
+                background: '#1a0515',
+                platforms: [
+                    {x: 0, y: 650, width: 1200, height: 50},
+                    {x: 300, y: 500, width: 200, height: 20},
+                    {x: 600, y: 400, width: 200, height: 20},
+                    {x: 900, y: 500, width: 200, height: 20},
+                ],
+                spawns: [
+                    {type: 'imp', x: 400, y: 450},
+                    {type: 'zombie', x: 700, y: 350},
+                    {type: 'imp', x: 950, y: 450},
+                    {type: 'wraith', x: 600, y: 200},
+                    {type: 'zombie', x: 300, y: 450},
+                ],
+                boss: {type: 'impLord', x: 1000, y: 400}
+            },
+            {
+                name: "Abandoned Highway",
+                background: '#0f0f1a',
+                platforms: [
+                    {x: 0, y: 650, width: 1200, height: 50},
+                    {x: 150, y: 550, width: 180, height: 20},
+                    {x: 400, y: 480, width: 150, height: 20},
+                    {x: 650, y: 420, width: 180, height: 20},
+                    {x: 900, y: 520, width: 150, height: 20},
+                    {x: 1050, y: 450, width: 150, height: 20},
+                ],
+                spawns: [
+                    {type: 'imp', x: 200, y: 500},
+                    {type: 'zombie', x: 450, y: 430},
+                    {type: 'imp', x: 700, y: 370},
+                    {type: 'zombie', x: 950, y: 470},
+                    {type: 'wraith', x: 500, y: 300},
+                    {type: 'imp', x: 1100, y: 400},
+                ],
+                boss: null
+            },
+            {
+                name: "Demon Fortress",
+                background: '#150a10',
+                platforms: [
+                    {x: 0, y: 650, width: 1200, height: 50},
+                    {x: 200, y: 550, width: 150, height: 20},
+                    {x: 450, y: 450, width: 150, height: 20},
+                    {x: 700, y: 350, width: 150, height: 20},
+                    {x: 950, y: 450, width: 150, height: 20},
+                    {x: 100, y: 480, width: 120, height: 20},
+                    {x: 600, y: 520, width: 120, height: 20},
+                ],
+                spawns: [
+                    {type: 'wraith', x: 250, y: 500},
+                    {type: 'imp', x: 500, y: 400},
+                    {type: 'zombie', x: 750, y: 300},
+                    {type: 'imp', x: 1000, y: 400},
+                    {type: 'wraith', x: 150, y: 430},
+                    {type: 'zombie', x: 650, y: 470},
+                    {type: 'imp', x: 400, y: 600},
+                ],
+                boss: {type: 'demonKnight', x: 1050, y: 300}
+            },
+            {
+                name: "Frozen Wasteland",
+                background: '#0a1520',
+                platforms: [
+                    {x: 0, y: 650, width: 1200, height: 50},
+                    {x: 200, y: 550, width: 150, height: 20},
+                    {x: 450, y: 450, width: 150, height: 20},
+                    {x: 700, y: 350, width: 150, height: 20},
+                    {x: 950, y: 450, width: 150, height: 20},
+                ],
+                spawns: [
+                    {type: 'wraith', x: 300, y: 500},
+                    {type: 'zombie', x: 500, y: 400},
+                    {type: 'imp', x: 750, y: 300},
+                    {type: 'wraith', x: 1000, y: 400},
+                    {type: 'zombie', x: 200, y: 500},
+                ],
+                boss: {type: 'frostGiant', x: 1000, y: 300}
+            },
+            {
+                name: "Hellfire Caverns",
+                background: '#1a0808',
+                platforms: [
+                    {x: 0, y: 650, width: 1200, height: 50},
+                    {x: 100, y: 570, width: 140, height: 20},
+                    {x: 300, y: 490, width: 140, height: 20},
+                    {x: 500, y: 410, width: 140, height: 20},
+                    {x: 700, y: 330, width: 140, height: 20},
+                    {x: 900, y: 410, width: 140, height: 20},
+                    {x: 1050, y: 490, width: 140, height: 20},
+                ],
+                spawns: [
+                    {type: 'imp', x: 150, y: 520},
+                    {type: 'imp', x: 350, y: 440},
+                    {type: 'wraith', x: 550, y: 360},
+                    {type: 'zombie', x: 750, y: 280},
+                    {type: 'imp', x: 950, y: 360},
+                    {type: 'wraith', x: 1100, y: 440},
+                    {type: 'imp', x: 600, y: 600},
+                    {type: 'zombie', x: 200, y: 600},
+                ],
+                boss: {type: 'hellbringer', x: 1000, y: 250}
+            },
+            {
+                name: "Asgard Bridge",
+                background: '#0a1015',
+                platforms: [
+                    {x: 0, y: 650, width: 1200, height: 50},
+                    {x: 150, y: 550, width: 180, height: 20},
+                    {x: 400, y: 480, width: 180, height: 20},
+                    {x: 650, y: 420, width: 180, height: 20},
+                    {x: 900, y: 360, width: 180, height: 20},
+                    {x: 200, y: 480, width: 120, height: 20},
+                    {x: 750, y: 520, width: 120, height: 20},
+                ],
+                spawns: [
+                    {type: 'wraith', x: 200, y: 500},
+                    {type: 'imp', x: 450, y: 430},
+                    {type: 'zombie', x: 700, y: 370},
+                    {type: 'wraith', x: 950, y: 310},
+                    {type: 'imp', x: 250, y: 430},
+                    {type: 'zombie', x: 800, y: 470},
+                    {type: 'imp', x: 500, y: 600},
+                    {type: 'wraith', x: 100, y: 600},
+                ],
+                boss: {type: 'valkyrie', x: 1050, y: 250}
+            },
+            {
+                name: "Gates of Hell",
+                background: '#150505',
+                platforms: [
+                    {x: 0, y: 650, width: 1200, height: 50},
+                    {x: 100, y: 570, width: 130, height: 20},
+                    {x: 280, y: 500, width: 130, height: 20},
+                    {x: 460, y: 430, width: 130, height: 20},
+                    {x: 640, y: 360, width: 130, height: 20},
+                    {x: 820, y: 430, width: 130, height: 20},
+                    {x: 1000, y: 500, width: 130, height: 20},
+                    {x: 190, y: 420, width: 100, height: 20},
+                    {x: 550, y: 520, width: 100, height: 20},
+                    {x: 910, y: 360, width: 100, height: 20},
+                ],
+                spawns: [
+                    {type: 'imp', x: 150, y: 520},
+                    {type: 'wraith', x: 330, y: 450},
+                    {type: 'imp', x: 510, y: 380},
+                    {type: 'zombie', x: 690, y: 310},
+                    {type: 'wraith', x: 870, y: 380},
+                    {type: 'imp', x: 1050, y: 450},
+                    {type: 'zombie', x: 240, y: 370},
+                    {type: 'imp', x: 600, y: 470},
+                    {type: 'wraith', x: 960, y: 310},
+                    {type: 'imp', x: 400, y: 600},
+                ],
+                boss: {type: 'satan', x: 1050, y: 200}
+            }
+        ];
+        
+        // Enhanced character drawing with pixel-art style
+        function drawPlayer() {
+            ctx.save();
+            ctx.translate(player.x + player.width/2, player.y + player.height/2);
+            if (player.facing < 0) ctx.scale(-1, 1);
+            
+            const frame = Math.floor(player.animFrame);
+            
+            if (player.type === 'billy') {
+                // Billy Tait - Ghost Detective (translucent with fedora)
+                // Body (ghostly)
+                ctx.fillStyle = player.invulnerable > 0 ? 'rgba(255,255,255,0.3)' : 'rgba(180,200,255,0.6)';
+                ctx.fillRect(-15, -20, 30, 40);
+                
+                // Head
+                ctx.fillStyle = 'rgba(220,230,255,0.7)';
+                ctx.fillRect(-12, -30, 24, 20);
+                
+                // Fedora
+                ctx.fillStyle = '#2a2a2a';
+                ctx.fillRect(-14, -35, 28, 5);
+                ctx.fillRect(-10, -40, 20, 5);
+                
+                // Eyes (glowing)
+                ctx.fillStyle = '#00ffff';
+                ctx.fillRect(-8, -26, 4, 4);
+                ctx.fillRect(4, -26, 4, 4);
+                
+                // Coat tails
+                ctx.fillStyle = 'rgba(40,40,60,0.8)';
+                ctx.fillRect(-15, 15, 8, 15);
+                ctx.fillRect(7, 15, 8, 15);
+                
+                // Spirit Blade (when attacking)
+                if (player.attackCooldown > 20) {
+                    ctx.fillStyle = '#00ffff';
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#00ffff';
+                    ctx.fillRect(15, -5, 30, 4);
+                    ctx.fillRect(40, -10, 5, 14);
+                    ctx.shadowBlur = 0;
+                }
+                
+            } else if (player.type === 'bonnie') {
+                // Bonnie - Soldier (military gear)
+                // Body (uniform)
+                ctx.fillStyle = player.invulnerable > 0 ? 'rgba(255,100,100,0.5)' : '#3a5a3a';
+                ctx.fillRect(-15, -15, 30, 35);
+                
+                // Head
+                ctx.fillStyle = '#d4a87c';
+                ctx.fillRect(-12, -28, 24, 18);
+                
+                // Helmet
+                ctx.fillStyle = '#4a5a4a';
+                ctx.fillRect(-13, -35, 26, 8);
+                
+                // Eyes
+                ctx.fillStyle = '#2a2a2a';
+                ctx.fillRect(-8, -24, 4, 3);
+                ctx.fillRect(4, -24, 4, 3);
+                
+                // Rifle
+                ctx.fillStyle = '#1a1a1a';
+                ctx.fillRect(12, -8, 25, 4);
+                ctx.fillRect(35, -10, 3, 8);
+                
+                // Muzzle flash when attacking
+                if (player.attackCooldown > 25) {
+                    ctx.fillStyle = '#ffff00';
+                    ctx.fillRect(38, -8, 8, 4);
+                }
+                
+            } else if (player.type === 'finnagan') {
+                // Finnagan - Werewolf (bestial)
+                // Body (fur)
+                ctx.fillStyle = player.invulnerable > 0 ? 'rgba(255,150,100,0.5)' : '#5a4a3a';
+                ctx.fillRect(-16, -18, 32, 38);
+                
+                // Head (wolf-like)
+                ctx.fillStyle = '#6a5a4a';
+                ctx.fillRect(-14, -32, 28, 20);
+                
+                // Snout
+                ctx.fillStyle = '#8a7a6a';
+                ctx.fillRect(-8, -22, 16, 10);
+                
+                // Ears
+                ctx.fillStyle = '#5a4a3a';
+                ctx.fillRect(-15, -38, 8, 10);
+                ctx.fillRect(7, -38, 8, 10);
+                
+                // Eyes (yellow)
+                ctx.fillStyle = '#ffff00';
+                ctx.fillRect(-10, -28, 5, 4);
+                ctx.fillRect(5, -28, 5, 4);
+                
+                // Claws
+                if (player.attackCooldown > 20) {
+                    ctx.fillStyle = '#ffffff';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.fillRect(15 + i*6, -10 + i*3, 15, 2);
+                    }
+                }
+                
+            } else if (player.type === 'raktooth') {
+                // Raktooth - Goblin (small and green)
+                // Body
+                ctx.fillStyle = player.invulnerable > 0 ? 'rgba(150,255,150,0.5)' : '#4a7a4a';
+                ctx.fillRect(-12, -15, 24, 30);
+                
+                // Head (oversized)
+                ctx.fillStyle = '#5a8a5a';
+                ctx.fillRect(-14, -28, 28, 20);
+                
+                // Large ears
+                ctx.fillStyle = '#4a7a4a';
+                ctx.fillRect(-18, -24, 6, 12);
+                ctx.fillRect(12, -24, 6, 12);
+                
+                // Big eyes
+                ctx.fillStyle = '#ffff00';
+                ctx.fillRect(-10, -24, 6, 6);
+                ctx.fillRect(4, -24, 6, 6);
+                ctx.fillStyle = '#000';
+                ctx.fillRect(-8, -22, 3, 3);
+                ctx.fillRect(6, -22, 3, 3);
+                
+                // Daggers
+                if (player.attackCooldown > 20) {
+                    ctx.fillStyle = '#c0c0c0';
+                    ctx.fillRect(12, -5, 12, 2);
+                    ctx.fillRect(12, 3, 12, 2);
+                    ctx.fillRect(22, -8, 2, 3);
+                    ctx.fillRect(22, 3, 2, 3);
+                }
+            }
+            
+            ctx.restore();
+            
+            // Walking animation
+            if (Math.abs(player.vx) > 0.5 && player.grounded) {
+                player.animTimer++;
+                if (player.animTimer > 8) {
+                    player.animFrame = (player.animFrame + 1) % 4;
+                    player.animTimer = 0;
+                }
+            }
+        }
+        
+        // Enhanced enemy drawing
+        function drawEnemy(enemy) {
+            ctx.save();
+            ctx.translate(enemy.x + enemy.width/2, enemy.y + enemy.height/2);
+            if (enemy.facing < 0) ctx.scale(-1, 1);
+            
+            if (enemy.type === 'imp') {
+                // Red demon imp
+                ctx.fillStyle = enemy.stunned > 0 ? '#ffffff' : '#cc0000';
+                
+                // Body
+                ctx.fillRect(-15, -15, 30, 30);
+                
+                // Head with horns
+                ctx.fillRect(-12, -25, 24, 15);
+                ctx.fillStyle = '#8a0000';
+                ctx.fillRect(-15, -30, 6, 8); // left horn
+                ctx.fillRect(9, -30, 6, 8); // right horn
+                
+                // Eyes (glowing)
+                ctx.fillStyle = '#ffff00';
+                ctx.fillRect(-8, -20, 4, 4);
+                ctx.fillRect(4, -20, 4, 4);
+                
+                // Tail
+                ctx.fillStyle = '#cc0000';
+                ctx.fillRect(-18, 5, 8, 3);
+                ctx.fillRect(-22, 2, 6, 3);
+                
+                // Claws
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(-15, 10, 3, 5);
+                ctx.fillRect(-10, 10, 3, 5);
+                ctx.fillRect(7, 10, 3, 5);
+                ctx.fillRect(12, 10, 3, 5);
+                
+            } else if (enemy.type === 'zombie') {
+                // Undead zombie
+                ctx.fillStyle = enemy.stunned > 0 ? '#ffffff' : '#6a8a6a';
+                
+                // Body (rotting)
+                ctx.fillRect(-16, -18, 32, 36);
+                
+                // Head
+                ctx.fillStyle = '#7a9a7a';
+                ctx.fillRect(-14, -28, 28, 18);
+                
+                // Missing chunks
+                ctx.fillStyle = '#1a1a1a';
+                ctx.fillRect(-10, -24, 6, 4);
+                ctx.fillRect(8, 2, 6, 8);
+                
+                // Eyes (dead)
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(-10, -22, 5, 5);
+                ctx.fillRect(5, -22, 5, 5);
+                ctx.fillStyle = '#000';
+                ctx.fillRect(-8, -20, 2, 2);
+                ctx.fillRect(7, -20, 2, 2);
+                
+                // Exposed bones
+                ctx.fillStyle = '#eeeeee';
+                ctx.fillRect(-5, -12, 3, 8);
+                ctx.fillRect(2, -12, 3, 8);
+                
+            } else if (enemy.type === 'wraith') {
+                // Floating ghost
+                const float = Math.sin(Date.now() / 300) * 5;
+                
+                ctx.fillStyle = enemy.stunned > 0 ? 'rgba(255,255,255,0.8)' : 'rgba(200,200,255,0.5)';
+                
+                // Wispy body
+                ctx.fillRect(-18, -20 + float, 36, 40);
+                ctx.fillRect(-14, -25 + float, 28, 10);
+                
+                // Hood
+                ctx.fillStyle = 'rgba(40,40,60,0.7)';
+                ctx.fillRect(-16, -30 + float, 32, 12);
+                
+                // Face (skull-like)
+                ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                ctx.fillRect(-12, -24 + float, 24, 14);
+                
+                // Eye sockets (glowing)
+                ctx.fillStyle = '#00ffff';
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#00ffff';
+                ctx.fillRect(-10, -20 + float, 6, 6);
+                ctx.fillRect(4, -20 + float, 6, 6);
+                ctx.shadowBlur = 0;
+                
+                // Tattered bottom
+                ctx.fillStyle = 'rgba(200,200,255,0.3)';
+                for (let i = -2; i <= 2; i++) {
+                    ctx.fillRect(i*6, 15 + float, 4, 10 + Math.random() * 5);
+                }
+                
+            } else if (enemy.type === 'impLord') {
+                // Large demon boss
+                ctx.fillStyle = enemy.stunned > 0 ? '#ffffff' : '#aa0000';
+                
+                // Large body
+                ctx.fillRect(-30, -35, 60, 70);
+                
+                // Head
+                ctx.fillRect(-25, -50, 50, 25);
+                
+                // Large horns
+                ctx.fillStyle = '#660000';
+                ctx.fillRect(-32, -60, 10, 18);
+                ctx.fillRect(22, -60, 10, 18);
+                
+                // Crown
+                ctx.fillStyle = '#ffaa00';
+                ctx.fillRect(-28, -55, 56, 4);
+                for (let i = -3; i <= 3; i++) {
+                    ctx.fillRect(i*8, -62, 5, 8);
+                }
+                
+                // Eyes
+                ctx.fillStyle = '#ff6600';
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#ff6600';
+                ctx.fillRect(-16, -42, 10, 10);
+                ctx.fillRect(6, -42, 10, 10);
+                ctx.shadowBlur = 0;
+                
+                // Mouth (fanged)
+                ctx.fillStyle = '#000';
+                ctx.fillRect(-12, -30, 24, 8);
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(-10, -30, 3, 6);
+                ctx.fillRect(-4, -30, 3, 6);
+                ctx.fillRect(2, -30, 3, 6);
+                ctx.fillRect(8, -30, 3, 6);
+                
+                // Wings
+                ctx.fillStyle = '#550000';
+                ctx.fillRect(-50, -30, 20, 40);
+                ctx.fillRect(30, -30, 20, 40);
+                
+                // Claws
+                ctx.fillStyle = '#ffffff';
+                for (let i = 0; i < 3; i++) {
+                    ctx.fillRect(-30 + i*8, 30, 4, 15);
+                    ctx.fillRect(18 + i*8, 30, 4, 15);
+                }
+                
+            } else if (enemy.type === 'frostGiant') {
+                // Ice giant boss
+                ctx.fillStyle = enemy.stunned > 0 ? '#ffffff' : '#a0c0ff';
+                
+                // Massive body
+                ctx.fillRect(-35, -40, 70, 80);
+                
+                // Head
+                ctx.fillRect(-28, -58, 56, 28);
+                
+                // Frozen beard
+                ctx.fillStyle = '#e0f0ff';
+                ctx.fillRect(-22, -35, 44, 15);
+                for (let i = -3; i <= 3; i++) {
+                    ctx.fillRect(i*6, -20, 4, 8 + Math.random() * 6);
+                }
+                
+                // Eyes
+                ctx.fillStyle = '#00aaff';
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#00aaff';
+                ctx.fillRect(-18, -50, 12, 12);
+                ctx.fillRect(6, -50, 12, 12);
+                ctx.shadowBlur = 0;
+                
+                // Ice crown
+                ctx.fillStyle = '#c0e0ff';
+                for (let i = -4; i <= 4; i++) {
+                    ctx.fillRect(i*6, -68, 5, 12);
+                }
+                
+                // Frost armor
+                ctx.fillStyle = '#d0e8ff';
+                ctx.fillRect(-30, -30, 12, 20);
+                ctx.fillRect(18, -30, 12, 20);
+                ctx.fillRect(-25, 10, 10, 25);
+                ctx.fillRect(15, 10, 10, 25);
+                
+                // Ice hammer
+                ctx.fillStyle = '#8090aa';
+                ctx.fillRect(35, -15, 8, 40);
+                ctx.fillStyle = '#b0c0d0';
+                ctx.fillRect(30, -25, 18, 15);
+                
+                // Frost aura
+                if (Math.random() < 0.3) {
+                    particles.push({
+                        x: enemy.x + (Math.random() - 0.5) * 80,
+                        y: enemy.y + (Math.random() - 0.5) * 100,
+                        vx: (Math.random() - 0.5) * 2,
+                        vy: -Math.random() * 2,
+                        life: 30,
+                        color: '#a0d0ff',
+                        size: 3 + Math.random() * 3
+                    });
+                }
+                
+            } else if (enemy.type === 'demonKnight') {
+                // Demon Knight boss - Armored demon warrior
+                ctx.fillStyle = enemy.stunned > 0 ? '#ffffff' : '#660000';
+                
+                // Large armored body
+                ctx.fillRect(-35, -40, 70, 80);
+                
+                // Head with helmet
+                ctx.fillStyle = '#440000';
+                ctx.fillRect(-28, -58, 56, 28);
+                
+                // Horned helmet
+                ctx.fillStyle = '#222222';
+                ctx.fillRect(-30, -62, 60, 8);
+                ctx.fillStyle = '#880000';
+                ctx.fillRect(-35, -70, 12, 14); // left horn
+                ctx.fillRect(23, -70, 12, 14); // right horn
+                
+                // Eyes (glowing)
+                ctx.fillStyle = '#ff0000';
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#ff0000';
+                ctx.fillRect(-18, -48, 12, 10);
+                ctx.fillRect(6, -48, 12, 10);
+                ctx.shadowBlur = 0;
+                
+                // Armor plates
+                ctx.fillStyle = '#333333';
+                ctx.fillRect(-30, -35, 60, 12);
+                ctx.fillRect(-28, -15, 56, 12);
+                ctx.fillRect(-26, 5, 52, 12);
+                
+                // Large sword
+                ctx.fillStyle = '#888888';
+                ctx.fillRect(35, -40, 12, 70);
+                ctx.fillStyle = '#666666';
+                ctx.fillRect(30, -50, 22, 15);
+                ctx.fillStyle = '#aa0000';
+                ctx.fillRect(38, -48, 6, 12); // gem
+                
+                // Shield
+                ctx.fillStyle = '#333333';
+                ctx.fillRect(-50, -20, 18, 40);
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(-47, -15, 12, 30); // red emblem
+                
+            } else if (enemy.type === 'hellbringer') {
+                // Hellbringer boss - Summoner demon
+                ctx.fillStyle = enemy.stunned > 0 ? '#ffffff' : '#cc2200';
+                
+                // Robed body
+                ctx.fillRect(-38, -40, 76, 80);
+                
+                // Head with hood
+                ctx.fillStyle = '#220000';
+                ctx.fillRect(-32, -60, 64, 28);
+                
+                // Hood
+                ctx.fillStyle = '#110000';
+                ctx.fillRect(-35, -68, 70, 12);
+                
+                // Skull face
+                ctx.fillStyle = '#dddddd';
+                ctx.fillRect(-24, -54, 48, 22);
+                
+                // Eye sockets (flames)
+                ctx.fillStyle = '#ff6600';
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#ff6600';
+                ctx.fillRect(-18, -48, 10, 10);
+                ctx.fillRect(8, -48, 10, 10);
+                ctx.shadowBlur = 0;
+                
+                // Hellfire staff
+                ctx.fillStyle = '#442200';
+                ctx.fillRect(38, -60, 8, 90);
+                
+                // Staff head (flames)
+                ctx.fillStyle = '#ff6600';
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#ff6600';
+                for (let i = 0; i < 5; i++) {
+                    ctx.fillRect(30 + i*4, -70 + i*3, 6, 12 - i*2);
+                }
+                ctx.shadowBlur = 0;
+                
+                // Floating runes
+                if (Math.random() < 0.3) {
+                    particles.push({
+                        x: enemy.x + (Math.random() - 0.5) * 100,
+                        y: enemy.y - 60 + Math.random() * 40,
+                        vx: (Math.random() - 0.5),
+                        vy: -1,
+                        life: 60,
+                        color: '#ff6600',
+                        size: 4
+                    });
+                }
+                
+            } else if (enemy.type === 'valkyrie') {
+                // Valkyrie boss - Norse warrior goddess
+                const float = Math.sin(Date.now() / 200) * 8;
+                
+                ctx.fillStyle = enemy.stunned > 0 ? '#ffffff' : '#d4af37';
+                
+                // Armored body (golden)
+                ctx.fillRect(-28, -38 + float, 56, 76);
+                
+                // Head
+                ctx.fillStyle = '#f5deb3';
+                ctx.fillRect(-22, -52 + float, 44, 20);
+                
+                // Winged helmet
+                ctx.fillStyle = '#d4af37';
+                ctx.fillRect(-24, -58 + float, 48, 10);
+                
+                // Wings on helmet
+                ctx.fillStyle = '#c0c0c0';
+                ctx.fillRect(-38, -54 + float, 14, 20);
+                ctx.fillRect(24, -54 + float, 14, 20);
+                for (let i = 0; i < 3; i++) {
+                    ctx.fillRect(-40 - i*3, -48 + i*4 + float, 14, 3);
+                    ctx.fillRect(26 + i*3, -48 + i*4 + float, 14, 3);
+                }
+                
+                // Eyes (fierce)
+                ctx.fillStyle = '#00aaff';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#00aaff';
+                ctx.fillRect(-16, -46 + float, 8, 6);
+                ctx.fillRect(8, -46 + float, 8, 6);
+                ctx.shadowBlur = 0;
+                
+                // Spear
+                ctx.fillStyle = '#c0c0c0';
+                ctx.fillRect(28, -70 + float, 6, 100);
+                ctx.fillStyle = '#d4af37';
+                ctx.fillRect(24, -80 + float, 14, 12);
+                
+                // Large wings (flying)
+                ctx.fillStyle = '#ffffff';
+                ctx.globalAlpha = 0.8;
+                for (let i = 0; i < 4; i++) {
+                    ctx.fillRect(-50 - i*8, -30 + i*8 + float, 20, 6);
+                    ctx.fillRect(30 + i*8, -30 + i*8 + float, 20, 6);
+                }
+                ctx.globalAlpha = 1;
+                
+                // Feather particles
+                if (Math.random() < 0.2) {
+                    particles.push({
+                        x: enemy.x + (Math.random() - 0.5) * 100,
+                        y: enemy.y + float,
+                        vx: (Math.random() - 0.5) * 2,
+                        vy: Math.random() * 2,
+                        life: 40,
+                        color: '#ffffff',
+                        size: 3
+                    });
+                }
+                
+            } else if (enemy.type === 'satan') {
+                // Satan - Final boss
+                ctx.fillStyle = enemy.stunned > 0 ? '#ffffff' : '#8b0000';
+                
+                // Massive demonic body
+                ctx.fillRect(-50, -55, 100, 110);
+                
+                // Head (large and imposing)
+                ctx.fillRect(-45, -80, 90, 35);
+                
+                // Massive curved horns
+                ctx.fillStyle = '#330000';
+                ctx.fillRect(-55, -95, 18, 25);
+                ctx.fillRect(-48, -108, 12, 15);
+                ctx.fillRect(37, -95, 18, 25);
+                ctx.fillRect(36, -108, 12, 15);
+                
+                // Crown of thorns
+                ctx.fillStyle = '#ffaa00';
+                for (let i = -6; i <= 6; i++) {
+                    ctx.fillRect(i*6, -85, 4, 10);
+                }
+                
+                // Eyes (blazing)
+                ctx.fillStyle = '#ffff00';
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#ff6600';
+                ctx.fillRect(-28, -68, 16, 16);
+                ctx.fillRect(12, -68, 16, 16);
+                ctx.shadowBlur = 0;
+                
+                // Mouth with fangs
+                ctx.fillStyle = '#000';
+                ctx.fillRect(-25, -52, 50, 14);
+                ctx.fillStyle = '#fff';
+                for (let i = -3; i <= 3; i++) {
+                    ctx.fillRect(i*7, -52, 4, 10);
+                }
+                
+                // Massive black wings
+                ctx.fillStyle = '#0a0a0a';
+                ctx.globalAlpha = 0.9;
+                for (let i = 0; i < 6; i++) {
+                    ctx.fillRect(-80 - i*12, -40 + i*8, 30, 8);
+                    ctx.fillRect(50 + i*12, -40 + i*8, 30, 8);
+                }
+                ctx.globalAlpha = 1;
+                
+                // Claws (massive)
+                ctx.fillStyle = '#ffffff';
+                for (let i = 0; i < 4; i++) {
+                    ctx.fillRect(-50 + i*10, 50, 6, 20);
+                    ctx.fillRect(25 + i*10, 50, 6, 20);
+                }
+                
+                // Hellfire aura
+                if (Math.random() < 0.5) {
+                    particles.push({
+                        x: enemy.x + (Math.random() - 0.5) * 120,
+                        y: enemy.y + (Math.random() - 0.5) * 140,
+                        vx: (Math.random() - 0.5) * 3,
+                        vy: -Math.random() * 3,
+                        life: 40,
+                        color: ['#ff0000', '#ff6600', '#ffaa00'][Math.floor(Math.random() * 3)],
+                        size: 5 + Math.random() * 5
+                    });
+                }
+            }
+            
+            ctx.restore();
+            
+            // Health bar for bosses
+            if (enemy.boss) {
+                const barWidth = 100;
+                const healthPercent = enemy.health / enemy.maxHealth;
+                
+                ctx.fillStyle = '#2a0a0a';
+                ctx.fillRect(enemy.x - 10, enemy.y - enemy.height - 15, barWidth, 8);
+                ctx.fillStyle = enemy.health > enemy.maxHealth * 0.5 ? '#00ff00' : enemy.health > enemy.maxHealth * 0.25 ? '#ffaa00' : '#ff0000';
+                ctx.fillRect(enemy.x - 10, enemy.y - enemy.height - 15, barWidth * healthPercent, 8);
+                ctx.strokeStyle = '#fff';
+                ctx.strokeRect(enemy.x - 10, enemy.y - enemy.height - 15, barWidth, 8);
+                
+                // Boss name
+                ctx.fillStyle = '#ff0000';
+                ctx.font = '14px Creepster';
+                ctx.textAlign = 'center';
+                ctx.fillText(enemy.name, enemy.x + barWidth/2 - 10, enemy.y - enemy.height - 20);
+            }
+        }
+        
+        // Initialize player based on selection
+        function initPlayer() {
+            const stats = charStats[selectedChar];
+            player = {
+                x: 100,
+                y: 500,
+                width: 40,
+                height: 60,
+                vx: 0,
+                vy: 0,
+                speed: stats.speed,
+                jumpPower: 15,
+                grounded: false,
+                facing: 1,
+                health: stats.hp,
+                maxHealth: stats.hp,
+                damage: stats.dmg,
+                armor: stats.armor,
+                level: player.level || 1,
+                xp: player.xp || 0,
+                xpNeeded: player.xpNeeded || 100,
+                attackCooldown: 0,
+                invulnerable: 0,
+                animFrame: 0,
+                animTimer: 0,
+                type: selectedChar,
+                weapon: stats.weapon,
+                attackRange: stats.range
+            };
+        }
+        
+        // Initialize level
+        function initLevel(index) {
+            const level = levels[index];
+            platforms = level.platforms.map(p => ({...p}));
+            enemies = [];
+            projectiles = [];
+            particles = [];
+            items = [];
+            
+            // Spawn regular enemies
+            level.spawns.forEach(spawn => {
+                spawnEnemy(spawn.type, spawn.x, spawn.y);
+            });
+            
+            // Spawn boss
+            if (level.boss) {
+                spawnEnemy(level.boss.type, level.boss.x, level.boss.y, true);
+            }
+            
+            document.getElementById('levelName').textContent = level.name;
+            document.getElementById('currentLevelText').textContent = index + 1;
+        }
+        
+        // Spawn enemy
+        function spawnEnemy(type, x, y, isBoss = false) {
+            const enemyData = {
+                imp: { w: 30, h: 40, hp: 15, dmg: 3, speed: 2, armor: 4, xp: 20 },
+                zombie: { w: 35, h: 50, hp: 25, dmg: 4, speed: 1, armor: 3, xp: 30 },
+                wraith: { w: 40, h: 50, hp: 20, dmg: 4, speed: 1.5, armor: 5, xp: 40, flying: true },
+                impLord: { w: 80, h: 100, hp: 100, dmg: 8, speed: 1.5, armor: 6, xp: 500, name: 'IMP LORD' },
+                demonKnight: { w: 85, h: 110, hp: 130, dmg: 10, speed: 1.2, armor: 8, xp: 600, name: 'DEMON KNIGHT' },
+                frostGiant: { w: 90, h: 120, hp: 150, dmg: 10, speed: 1, armor: 7, xp: 750, name: 'FROST GIANT' },
+                hellbringer: { w: 95, h: 115, hp: 180, dmg: 12, speed: 1.3, armor: 9, xp: 900, name: 'HELLBRINGER' },
+                valkyrie: { w: 70, h: 100, hp: 160, dmg: 14, speed: 2, armor: 10, xp: 1000, name: 'VALKYRIE', flying: true },
+                satan: { w: 120, h: 140, hp: 300, dmg: 18, speed: 1.5, armor: 12, xp: 2500, name: 'SATAN' }
+            };
+            
+            const data = enemyData[type];
+            enemies.push({
+                x: x,
+                y: y,
+                width: data.w,
+                height: data.h,
+                vx: 0,
+                vy: 0,
+                speed: data.speed,
+                health: data.hp,
+                maxHealth: data.hp,
+                damage: data.dmg,
+                armor: data.armor,
+                xp: data.xp,
+                type: type,
+                facing: -1,
+                grounded: false,
+                attackCooldown: 0,
+                stunned: 0,
+                ai: { state: 'patrol', timer: 0 },
+                flying: data.flying || false,
+                boss: isBoss,
+                name: data.name || type.toUpperCase()
+            });
+        }
+        
+        // Enemy AI
+        function updateEnemyAI(enemy) {
+            if (enemy.stunned > 0) {
+                enemy.stunned--;
+                return;
+            }
+            
+            const dx = player.x - enemy.x;
+            const dy = player.y - enemy.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            
+            if (enemy.boss) {
+                // Boss AI - more aggressive
+                if (dist < 400) {
+                    enemy.ai.state = 'chase';
+                }
+                
+                if (enemy.ai.state === 'chase') {
+                    enemy.facing = dx > 0 ? 1 : -1;
+                    
+                    if (dist > 100) {
+                        enemy.vx = enemy.facing * enemy.speed;
+                    } else {
+                        enemy.vx = 0;
+                        
+                        // Attack
+                        if (enemy.attackCooldown === 0) {
+                            if (enemy.type === 'impLord') {
+                                // Fireball attack
+                                for (let i = -1; i <= 1; i++) {
+                                    projectiles.push({
+                                        x: enemy.x + enemy.width/2,
+                                        y: enemy.y + enemy.height/2,
+                                        vx: enemy.facing * 6 + i * 2,
+                                        vy: -2 + i * 2,
+                                        damage: enemy.damage,
+                                        owner: 'enemy',
+                                        color: '#ff6600',
+                                        size: 8,
+                                        trail: true
+                                    });
+                                }
+                                enemy.attackCooldown = 60;
+                            } else if (enemy.type === 'frostGiant') {
+                                // Ice shards
+                                for (let i = 0; i < 5; i++) {
+                                    projectiles.push({
+                                        x: enemy.x + enemy.width/2,
+                                        y: enemy.y,
+                                        vx: (Math.random() - 0.5) * 8,
+                                        vy: -8 - Math.random() * 4,
+                                        damage: enemy.damage,
+                                        owner: 'enemy',
+                                        color: '#a0d0ff',
+                                        size: 6,
+                                        gravity: 0.3
+                                    });
+                                }
+                                enemy.attackCooldown = 90;
+                            } else if (enemy.type === 'demonKnight') {
+                                // Sword slash wave
+                                projectiles.push({
+                                    x: enemy.x + enemy.width/2,
+                                    y: enemy.y + enemy.height/2,
+                                    vx: enemy.facing * 8,
+                                    vy: 0,
+                                    damage: enemy.damage,
+                                    owner: 'enemy',
+                                    color: '#ff0000',
+                                    size: 12,
+                                    trail: true
+                                });
+                                enemy.attackCooldown = 70;
+                            } else if (enemy.type === 'hellbringer') {
+                                // Hellfire barrage
+                                for (let i = 0; i < 7; i++) {
+                                    setTimeout(() => {
+                                        projectiles.push({
+                                            x: enemy.x + enemy.width/2,
+                                            y: enemy.y - 60,
+                                            vx: enemy.facing * 5 + (Math.random() - 0.5) * 4,
+                                            vy: -6 - Math.random() * 4,
+                                            damage: enemy.damage,
+                                            owner: 'enemy',
+                                            color: '#ff6600',
+                                            size: 8,
+                                            gravity: 0.2,
+                                            trail: true
+                                        });
+                                    }, i * 100);
+                                }
+                                enemy.attackCooldown = 120;
+                            } else if (enemy.type === 'valkyrie') {
+                                // Lightning spear throw
+                                projectiles.push({
+                                    x: enemy.x + enemy.width/2,
+                                    y: enemy.y,
+                                    vx: enemy.facing * 10,
+                                    vy: -1,
+                                    damage: enemy.damage,
+                                    owner: 'enemy',
+                                    color: '#00aaff',
+                                    size: 10,
+                                    trail: true
+                                });
+                                // Lightning bolts
+                                for (let i = 0; i < 3; i++) {
+                                    setTimeout(() => {
+                                        projectiles.push({
+                                            x: player.x + (Math.random() - 0.5) * 100,
+                                            y: 0,
+                                            vx: 0,
+                                            vy: 15,
+                                            damage: enemy.damage * 0.5,
+                                            owner: 'enemy',
+                                            color: '#ffff00',
+                                            size: 6
+                                        });
+                                    }, i * 200);
+                                }
+                                enemy.attackCooldown = 100;
+                            } else if (enemy.type === 'satan') {
+                                // Hellfire apocalypse - multiple attack types
+                                const attackType = Math.floor(Math.random() * 3);
+                                
+                                if (attackType === 0) {
+                                    // Fire wave
+                                    for (let i = -2; i <= 2; i++) {
+                                        projectiles.push({
+                                            x: enemy.x + enemy.width/2,
+                                            y: enemy.y + enemy.height/2,
+                                            vx: enemy.facing * 7 + i * 3,
+                                            vy: -3 + i,
+                                            damage: enemy.damage,
+                                            owner: 'enemy',
+                                            color: '#ff0000',
+                                            size: 12,
+                                            trail: true
+                                        });
+                                    }
+                                } else if (attackType === 1) {
+                                    // Meteor rain
+                                    for (let i = 0; i < 10; i++) {
+                                        setTimeout(() => {
+                                            projectiles.push({
+                                                x: Math.random() * canvas.width,
+                                                y: 0,
+                                                vx: (Math.random() - 0.5) * 4,
+                                                vy: 8 + Math.random() * 6,
+                                                damage: enemy.damage * 0.7,
+                                                owner: 'enemy',
+                                                color: '#ff6600',
+                                                size: 10,
+                                                trail: true
+                                            });
+                                        }, i * 150);
+                                    }
+                                } else {
+                                    // Ground eruption
+                                    for (let i = 0; i < 8; i++) {
+                                        setTimeout(() => {
+                                            projectiles.push({
+                                                x: enemy.x - 400 + i * 100,
+                                                y: canvas.height - 50,
+                                                vx: 0,
+                                                vy: -12,
+                                                damage: enemy.damage * 0.6,
+                                                owner: 'enemy',
+                                                color: '#ffaa00',
+                                                size: 14,
+                                                gravity: 0.4
+                                            });
+                                        }, i * 100);
+                                    }
+                                }
+                                enemy.attackCooldown = 150;
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Regular enemy AI
+                if (dist < 250) {
+                    enemy.ai.state = 'chase';
+                } else if (dist > 350) {
+                    enemy.ai.state = 'patrol';
+                }
+                
+                if (enemy.ai.state === 'patrol') {
+                    enemy.ai.timer--;
+                    if (enemy.ai.timer <= 0) {
+                        enemy.facing *= -1;
+                        enemy.ai.timer = 60 + Math.random() * 120;
+                    }
+                    enemy.vx = enemy.facing * enemy.speed * 0.5;
+                    
+                } else if (enemy.ai.state === 'chase') {
+                    enemy.facing = dx > 0 ? 1 : -1;
+                    
+                    if (dist > 60) {
+                        enemy.vx = enemy.facing * enemy.speed;
+                    } else {
+                        enemy.vx = 0;
+                        
+                        // Melee attack
+                        if (enemy.attackCooldown === 0 && checkCollision(player, enemy)) {
+                            damagePlayer(enemy.damage);
+                            enemy.attackCooldown = 60;
+                        }
+                    }
+                }
+            }
+            
+            if (enemy.attackCooldown > 0) enemy.attackCooldown--;
+        }
+        
+        // Player attack
+        function playerAttack() {
+            if (player.attackCooldown > 0) return;
+            
+            player.attackCooldown = 30;
+            
+            if (player.weapon === 'rifle') {
+                // Ranged attack
+                projectiles.push({
+                    x: player.x + player.width/2,
+                    y: player.y + player.height/2,
+                    vx: player.facing * 12,
+                    vy: 0,
+                    damage: player.damage,
+                    owner: 'player',
+                    color: '#ffff00',
+                    size: 4
+                });
+            } else {
+                // Melee attack
+                enemies.forEach(enemy => {
+                    const dx = enemy.x - player.x;
+                    const dist = Math.abs(dx);
+                    
+                    if (dist < player.attackRange && Math.sign(dx) === player.facing) {
+                        damageEnemy(enemy, player.damage);
+                    }
+                });
+            }
+        }
+        
+        // Damage enemy
+        function damageEnemy(enemy, damage) {
+            const roll = Math.floor(Math.random() * 6) + 1 + player.level + 5; // +5 bonus for consistent hits
+            
+            if (roll > enemy.armor) {
+                enemy.health -= damage;
+                enemy.stunned = 10;
+                
+                // Particles
+                for (let i = 0; i < 5; i++) {
+                    particles.push({
+                        x: enemy.x + enemy.width/2,
+                        y: enemy.y + enemy.height/2,
+                        vx: (Math.random() - 0.5) * 4,
+                        vy: -Math.random() * 4,
+                        life: 20,
+                        color: '#ff0000',
+                        size: 3
+                    });
+                }
+                
+                if (enemy.health <= 0) {
+                    score += enemy.xp;
+                    player.xp += enemy.xp;
+                    
+                    // Death particles
+                    for (let i = 0; i < 20; i++) {
+                        particles.push({
+                            x: enemy.x + enemy.width/2,
+                            y: enemy.y + enemy.height/2,
+                            vx: (Math.random() - 0.5) * 6,
+                            vy: -Math.random() * 8,
+                            life: 40,
+                            color: enemy.type === 'wraith' ? '#a0c0ff' : enemy.type.includes('Lord') ? '#ff6600' : '#8a0000',
+                            size: 4 + Math.random() * 4
+                        });
+                    }
+                    
+                    // Check for level up
+                    if (player.xp >= player.xpNeeded) {
+                        levelUp();
+                    }
+                    
+                    enemies.splice(enemies.indexOf(enemy), 1);
+                    
+                    // Check win condition
+                    if (enemies.length === 0) {
+                        levelComplete();
+                    }
+                }
+            } else {
+                // Miss
+                showMessage('MISS!');
+            }
+        }
+        
+        // Damage player
+        function damagePlayer(damage) {
+            if (player.invulnerable > 0) return;
+            
+            const roll = Math.floor(Math.random() * 6) + 1 - 3; // -3 penalty for enemies (even harder to hit)
+            
+            if (roll > player.armor) {
+                player.health -= damage;
+                player.invulnerable = 60;
+                
+                if (player.health <= 0) {
+                    gameOver();
+                }
+            }
+        }
+        
+        // Level up
+        function levelUp() {
+            player.level++;
+            player.xp -= player.xpNeeded;
+            player.xpNeeded = Math.floor(player.xpNeeded * 1.5);
+            player.maxHealth += 5;
+            player.health = player.maxHealth;
+            player.damage += 2;
+            
+            showMessage('LEVEL UP!');
+        }
+        
+        // Update physics
+        function updatePhysics(obj) {
+            // Gravity
+            if (!obj.flying) {
+                obj.vy += 0.5;
+            }
+            
+            // Apply velocity
+            obj.x += obj.vx;
+            obj.y += obj.vy;
+            
+            // Platform collision
+            obj.grounded = false;
+            platforms.forEach(plat => {
+                if (obj.x + obj.width > plat.x && obj.x < plat.x + plat.width) {
+                    if (obj.y + obj.height > plat.y && obj.y + obj.height < plat.y + 20 && obj.vy > 0) {
+                        obj.y = plat.y - obj.height;
+                        obj.vy = 0;
+                        obj.grounded = true;
+                    }
+                }
+            });
+            
+            // Screen bounds
+            if (obj.x < 0) obj.x = 0;
+            if (obj.x + obj.width > canvas.width) obj.x = canvas.width - obj.width;
+            if (obj.y > canvas.height) obj.y = canvas.height;
+        }
+        
+        // Collision detection
+        function checkCollision(a, b) {
+            return a.x < b.x + b.width &&
+                   a.x + a.width > b.x &&
+                   a.y < b.y + b.height &&
+                   a.y + a.height > b.y;
+        }
+        
+        // Show message
+        function showMessage(text) {
+            const msg = document.createElement('div');
+            msg.className = 'message';
+            msg.textContent = text;
+            document.getElementById('gameContainer').appendChild(msg);
+            setTimeout(() => msg.remove(), 2000);
+        }
+        
+        // Level complete
+        function levelComplete() {
+            gameState = 'levelComplete';
+            document.getElementById('killCount').textContent = levels[currentLevel].spawns.length + 1;
+            document.getElementById('xpGained').textContent = score;
+            document.getElementById('levelComplete').style.display = 'flex';
+        }
+        
+        // Game over
+        function gameOver() {
+            gameState = 'dead';
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('deathScreen').style.display = 'flex';
+        }
+        
+        // Update UI
+        function updateUI() {
+            document.getElementById('charName').textContent = player.type.toUpperCase();
+            document.getElementById('level').textContent = player.level;
+            document.getElementById('hp').textContent = Math.max(0, player.health);
+            document.getElementById('maxHp').textContent = player.maxHealth;
+            document.getElementById('xp').textContent = player.xp;
+            document.getElementById('xpNeeded').textContent = player.xpNeeded;
+            document.getElementById('score').textContent = score;
+            
+            const healthPercent = player.health / player.maxHealth * 100;
+            document.getElementById('healthFill').style.width = healthPercent + '%';
+            
+            const xpPercent = player.xp / player.xpNeeded * 100;
+            document.getElementById('xpFill').style.width = xpPercent + '%';
+        }
+        
+        // Draw background
+        function drawBackground() {
+            const level = levels[currentLevel];
+            ctx.fillStyle = level.background;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Stars
+            for (let i = 0; i < 100; i++) {
+                const x = (i * 123) % canvas.width;
+                const y = (i * 456) % canvas.height;
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.fillRect(x, y, 1, 1);
+            }
+        }
+        
+        // Draw platforms
+        function drawPlatforms() {
+            platforms.forEach(plat => {
+                ctx.fillStyle = '#4a2a1a';
+                ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
+                ctx.strokeStyle = '#2a1a0a';
+                ctx.strokeRect(plat.x, plat.y, plat.width, plat.height);
+            });
+        }
+        
+        // Draw projectiles
+        function drawProjectiles() {
+            projectiles.forEach((proj, i) => {
+                proj.x += proj.vx;
+                proj.y += proj.vy;
+                if (proj.gravity) proj.vy += proj.gravity;
+                
+                // Trail effect
+                if (proj.trail) {
+                    particles.push({
+                        x: proj.x,
+                        y: proj.y,
+                        vx: 0,
+                        vy: 0,
+                        life: 10,
+                        color: proj.color,
+                        size: proj.size * 0.5
+                    });
+                }
+                
+                ctx.fillStyle = proj.color;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = proj.color;
+                ctx.fillRect(proj.x - proj.size/2, proj.y - proj.size/2, proj.size, proj.size);
+                ctx.shadowBlur = 0;
+                
+                // Collision with enemies/player
+                if (proj.owner === 'player') {
+                    enemies.forEach(enemy => {
+                        if (checkCollision(proj, enemy)) {
+                            damageEnemy(enemy, proj.damage);
+                            projectiles.splice(i, 1);
+                        }
+                    });
+                } else {
+                    if (checkCollision(proj, player)) {
+                        damagePlayer(proj.damage);
+                        projectiles.splice(i, 1);
+                    }
+                }
+                
+                // Remove off-screen
+                if (proj.x < 0 || proj.x > canvas.width || proj.y < 0 || proj.y > canvas.height) {
+                    projectiles.splice(i, 1);
+                }
+            });
+        }
+        
+        // Draw particles
+        function drawParticles() {
+            particles.forEach((p, i) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.2;
+                p.life--;
+                
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / 40;
+                ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+                ctx.globalAlpha = 1;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            });
+        }
+        
+        // Game loop
+        function gameLoop() {
+            if (gameState === 'playing') {
+                // Player input
+                player.vx = 0;
+                if (keys['ArrowLeft'] || keys['KeyA']) {
+                    player.vx = -player.speed;
+                    player.facing = -1;
+                }
+                if (keys['ArrowRight'] || keys['KeyD']) {
+                    player.vx = player.speed;
+                    player.facing = 1;
+                }
+                if ((keys['ArrowUp'] || keys['KeyW'] || keys['Space']) && player.grounded) {
+                    player.vy = -player.jumpPower;
+                }
+                if (mouseDown || keys['KeyX'] || keys['KeyZ']) {
+                    playerAttack();
+                }
+                
+                // Update
+                updatePhysics(player);
+                
+                enemies.forEach(enemy => {
+                    updateEnemyAI(enemy);
+                    updatePhysics(enemy);
+                });
+                
+                if (player.attackCooldown > 0) player.attackCooldown--;
+                if (player.invulnerable > 0) player.invulnerable--;
+                
+                updateUI();
+            }
+            
+            // Draw
+            drawBackground();
+            drawPlatforms();
+            drawParticles();
+            drawProjectiles();
+            enemies.forEach(drawEnemy);
+            drawPlayer();
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Draw character previews
+        function drawCharPreviews() {
+            document.querySelectorAll('.char-preview').forEach((canvas, i) => {
+                const ctx = canvas.getContext('2d');
+                const chars = ['billy', 'bonnie', 'finnagan', 'raktooth'];
+                const tempPlayer = { ...player, type: chars[i], x: 50, y: 50, width: 40, height: 60, facing: 1, attackCooldown: 0, invulnerable: 0, animFrame: 0 };
+                
+                ctx.clearRect(0, 0, 100, 100);
+                ctx.save();
+                ctx.translate(0, 20);
+                player = tempPlayer;
+                drawPlayer();
+                ctx.restore();
+            });
+            player.type = selectedChar;
+        }
+        
+        // Event listeners
+        document.addEventListener('keydown', e => { keys[e.code] = true; });
+        document.addEventListener('keyup', e => { keys[e.code] = false; });
+        canvas.addEventListener('mousedown', () => mouseDown = true);
+        canvas.addEventListener('mouseup', () => mouseDown = false);
+        
+        document.querySelectorAll('.char-option').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('.char-option').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+                selectedChar = option.dataset.char;
+            });
+        });
+        
+        document.getElementById('startBtn').addEventListener('click', () => {
+            document.getElementById('titleScreen').style.display = 'none';
+            gameState = 'playing';
+            initPlayer();
+            initLevel(0);
+        });
+        
+        document.getElementById('retryBtn').addEventListener('click', () => {
+            document.getElementById('deathScreen').style.display = 'none';
+            gameState = 'playing';
+            score = 0;
+            player.level = 1;
+            player.xp = 0;
+            initPlayer();
+            initLevel(currentLevel);
+        });
+        
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            document.getElementById('levelComplete').style.display = 'none';
+            currentLevel++;
+            if (currentLevel >= levels.length) {
+                currentLevel = 0;
+                showMessage('YOU SURVIVED THE APOCALYPSE!');
+            }
+            gameState = 'playing';
+            initLevel(currentLevel);
+        });
+        
+        // Initialize
+        drawCharPreviews();
+        gameLoop();
+    </script>
+</body>
+</html>
